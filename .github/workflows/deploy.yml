@@ -31,6 +31,22 @@ jobs:
     needs: build-and-push # 빌드가 반드시 성공해야만 배포를 시작합니다.
 
     steps:
+
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+    # GitHub 저장소의 모든 파일을 서버의 /app 디렉터리로 복사합니다.
+    - name: Copy repository files to server /app
+      uses: appleboy/scp-action@v1
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USERNAME }}
+        key: ${{ secrets.SERVER_KEY }}
+        port: ${{ secrets.SERVER_PORT }}
+        source: "./*"
+        target: "~/app"
+        rm: true # 기존 폴더 지우기
+
     # SSH 원격 접속 후 서버 컴퓨터 터미널에서 아래 명령어들을 차례로 실행합니다.
     - name: Executing remote ssh commands using password
       uses: appleboy/ssh-action@v1.2.0
@@ -49,7 +65,7 @@ jobs:
           docker rm guestbook || true
 
           echo "🏃 3. 새 이미지로 컨테이너 실행하기..."
-          docker run -d -p 5010:5000 --name guestbook ${{ secrets.DOCKERHUB_USERNAME }}/flask-guestbook:latest
+          docker run -d -p 5010:5000 -v ~/app:/app --name guestbook ${{ secrets.DOCKERHUB_USERNAME }}/flask-guestbook:latest
 
           echo "🧼 4. 안 쓰는 옛날 이미지(찌꺼기) 청소하기..."
           docker image prune -f
